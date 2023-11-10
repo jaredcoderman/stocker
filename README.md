@@ -1,6 +1,6 @@
 # Stocker
 
-This project scrapes stock data into a PlanetScale database from which a Flask API accesses to retrieve stock data. This is a service for my StockSim project.
+This project scrapes stock data into a PlanetScale database and has a Flask API that fetches from that databasea. This is a service for my StockSim project.
 
 ## Installation
 
@@ -20,3 +20,6 @@ This project scrapes stock data into a PlanetScale database from which a Flask A
 `python3 api.py`
 OR
 `python3 scrape.py`
+
+The only working API route right now is 127.0.0.1/prices/{ticker}
+i.e. `127.0.0.1/price/AMZN`
