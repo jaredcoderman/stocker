@@ -11,17 +11,21 @@ cd stocker
 ```
 
 3. Make a venv i.e.
-`python3 -m venv .`
-`source bin/activate
+```
+python3 -m venv .
+source bin/activate
+```
 
-4. Run poetry install
-`poetry install`
+5. Run poetry install
+```poetry install```
 
-5. Make env variables for a planetscale database by following PlanetScale's "Connect with python" instructions after making a database.
-6. Start the API/Scraper
-`python3 api.py`
+6. Make env variables for a planetscale database by following PlanetScale's "Connect with python" instructions after making a database.
+7. Start the API/Scraper
+```
+python3 api.py
 OR
-`python3 scrape.py`
+python3 scrape.py
+```
 
 The only working API route right now is 127.0.0.1/prices/{ticker}
 i.e. `127.0.0.1/price/AMZN`
