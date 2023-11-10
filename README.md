@@ -16,11 +16,13 @@ python3 -m venv .
 source bin/activate
 ```
 
-5. Run poetry install
-```poetry install```
+5. Install the dependencies
+```
+poetry install
+```
 
-6. Make env variables for a planetscale database by following PlanetScale's "Connect with python" instructions after making a database.
-7. Start the API/Scraper
+7. Make env variables for a planetscale database by following PlanetScale's "Connect with python" instructions after making a database.
+8. Start the API/Scraper
 ```
 python3 api.py
 OR
