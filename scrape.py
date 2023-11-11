@@ -1,9 +1,10 @@
 import requests
 import modal
 from funcs.db import *
-from datetime import datetime
-import time
+from datetime import datetime, time
+import time as sleep_time
 import os
+import pytz
 from bs4 import BeautifulSoup
 
 stub = modal.Stub("stock-scrape")
@@ -24,7 +25,8 @@ bs4_image = modal.Image.debian_slim(python_version="3.10").run_commands(
     "pip install beautifulsoup4",
     "pip install requests",
     "pip install psycopg2-binary",
-    "pip install python-dotenv"
+    "pip install python-dotenv",
+    "pip install pytz"
 )
 
 
@@ -37,21 +39,23 @@ my_headers = {"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OSX 10_14_3) Apple
 def get_current_timestamp():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+timezone = pytz.timezone('America/New_York')  # replace with the actual timezone
+
 def is_weekday():
     # Get the current day of the week (Monday is 0, Sunday is 6)
-    return datetime.datetime.today().weekday() < 5
+    return datetime.now(timezone).weekday() < 5
 
 def is_working_hours():
-    # Get the current time
-    current_time = datetime.datetime.now().time()
+    # Get the current time in the specified timezone
+    current_time = datetime.now(timezone).time()
 
     # Check if the current time is between 9:30 am and 4:00 pm
-    return datetime.time(9, 30) <= current_time <= datetime.time(16, 0)
+    return time(9, 30) <= current_time <= time(16, 0)
 
-@stub.function(image=bs4_image, secret=modal.Secret.from_name("database_connection_string"), mounts=[funcs])
+@stub.function(image=bs4_image, secret=modal.Secret.from_name("database_connection_string"), mounts=[funcs], schedule=modal.Cron("30 14 * * *"))
 def scrape():
   print(os.listdir("/root"))
-  while is_working_hours:
+  while is_working_hours():
     stock_data = []
     print("Scraping...\n")
     for i in range(0, 37):
@@ -76,7 +80,7 @@ def scrape():
         print(f"Request to {url} failed with status code {response.status_code}.")
 
       print(f"Page {i + 1} / 37")
-      time.sleep(1.63)
+      sleep_time.sleep(1.63)
 
     # Create Stocks
     # stocks_data = []
@@ -93,7 +97,6 @@ def scrape():
     for stock in stock_data:
       query_stock_data.append((stock[0], float(stock[2]), time_stamp))
     add_prices(query_stock_data)
-    break
 
 @stub.local_entrypoint()
 def main():
