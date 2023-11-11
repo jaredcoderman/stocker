@@ -55,7 +55,7 @@ def is_working_hours():
 @stub.function(image=bs4_image, secret=modal.Secret.from_name("database_connection_string"), mounts=[funcs], schedule=modal.Cron("30 14 * * *"))
 def scrape():
   print(os.listdir("/root"))
-  while is_working_hours():
+  while is_working_hours() and is_weekday():
     stock_data = []
     print("Scraping...\n")
     for i in range(0, 37):
