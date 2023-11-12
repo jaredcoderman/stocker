@@ -5,6 +5,7 @@ from datetime import datetime, time
 import time as sleep_time
 import os
 import pytz
+import random
 from bs4 import BeautifulSoup
 
 stub = modal.Stub("stock-scrape")
@@ -52,12 +53,13 @@ def is_working_hours():
     # Check if the current time is between 9:30 am and 4:00 pm
     return time(9, 30) <= current_time <= time(16, 0)
 
+
 @stub.function(image=bs4_image, secret=modal.Secret.from_name("database_connection_string"), mounts=[funcs], schedule=modal.Cron("30 14 * * *"))
 def scrape():
-  print(os.listdir("/root"))
-  while is_working_hours() and is_weekday():
+  while is_weekday() and is_working_hours():
     stock_data = []
-    print("Scraping...\n")
+    print("Scraping...")
+    total_start_time = sleep_time.time()
     for i in range(0, 37):
       url = f'https://finviz.com/screener.ashx?v=111&f=cap_largeover'
           
@@ -80,7 +82,7 @@ def scrape():
         print(f"Request to {url} failed with status code {response.status_code}.")
 
       print(f"Page {i + 1} / 37")
-      sleep_time.sleep(1.63)
+      sleep_time.sleep(random.uniform(0.4, 1.0))
 
     # Create Stocks
     # stocks_data = []
@@ -90,13 +92,27 @@ def scrape():
     
     # break
 
-  #  Update stocks
+    # Update stocks
     query_stock_data = []
     time_stamp = get_current_timestamp()
-    print("Prepping data for query...")
     for stock in stock_data:
       query_stock_data.append((stock[0], float(stock[2]), time_stamp))
+    print("\nInserting prices...")
+    start_time = sleep_time.time()
     add_prices(query_stock_data)
+    print("Done!")
+    end_time = sleep_time.time()
+    diff = end_time - start_time
+    total_diff = end_time - total_start_time
+    print("\nTime Logs:\n")
+    print(f"Inserted in {diff:.2f} seconds.")
+    print(f"Total operation took {total_diff:.2f} seconds.")
+    wait_time = 60 - total_diff
+    print(f"\nWaiting {wait_time:.2f} seconds to restart..")
+    sleep_time.sleep(wait_time)
+
+  # Now that the day of scraping is done, get the prices that are on the hour and make price_history entries
+  
 
 @stub.local_entrypoint()
 def main():

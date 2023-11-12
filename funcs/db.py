@@ -94,3 +94,13 @@ def get_prices(ticker):
   cursor.close()
   conn.close()
   return rows
+
+# def get_hourly_prices():
+#   conn, cursor = get_db_connection()
+#   query = f"SELECT * FROM price WHERE stock_ticker = %s"
+#   values = (ticker,)
+#   cursor.execute(query, values)
+#   rows = cursor.fetchall()
+#   cursor.close()
+#   conn.close()
+#   return rows
