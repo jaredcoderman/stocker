@@ -54,7 +54,7 @@ def is_working_hours():
     return time(9, 30) <= current_time <= time(16, 0)
 
 
-@stub.function(image=bs4_image, secret=modal.Secret.from_name("database_connection_string"), mounts=[funcs], schedule=modal.Cron("30 14 * * *"))
+@stub.function(image=bs4_image, secret=modal.Secret.from_name("database_connection_string"), mounts=[funcs], schedule=modal.Cron("30 14 * * *"), timeout=23400)
 def scrape():
   while is_weekday() and is_working_hours():
     stock_data = []
@@ -82,7 +82,7 @@ def scrape():
         print(f"Request to {url} failed with status code {response.status_code}.")
 
       print(f"Page {i + 1} / 37")
-      sleep_time.sleep(random.uniform(0.4, 1.0))
+      sleep_time.sleep(.5)
 
     # Create Stocks
     # stocks_data = []
