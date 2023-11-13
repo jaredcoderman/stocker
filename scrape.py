@@ -5,6 +5,7 @@ from datetime import datetime, time
 import time as sleep_time
 import os
 import pytz
+import math
 import random
 from bs4 import BeautifulSoup
 
@@ -108,6 +109,8 @@ def scrape():
     print(f"Inserted in {diff:.2f} seconds.")
     print(f"Total operation took {total_diff:.2f} seconds.")
     wait_time = 60 - total_diff
+    if wait_time < 0:
+      wait_time = 0
     print(f"\nWaiting {wait_time:.2f} seconds to restart..")
     sleep_time.sleep(wait_time)
 
