@@ -47,9 +47,9 @@ def make_historical_prices():
 @stub.function(image=scrape_image, secret=modal.Secret.from_name("database_connection_string"), mounts=[funcs], schedule=modal.Cron("30 14 * * *"), timeout=23400)
 def scrape():
   insertion_times = []
-  stock_data = []
+  
   while is_weekday() and is_working_hours():
-    
+    stock_data = []
     # Scrape all the pages
     print("Scraping...")
     total_start_time = time.time()
@@ -74,7 +74,7 @@ def scrape():
       else:
         print(f"Request to {url} failed with status code {response.status_code}.")
       print(f'\r  Page {i + 1} / 37', end="\r")
-      time.sleep(.3)
+      time.sleep(.4)
 
     # Update stocks
     query_stock_data = []
@@ -104,17 +104,14 @@ def scrape():
     time.sleep(wait_time)
 
   # Now that the day of scraping is done, get the prices that are on the hour and make price_history entries
-  start_time = time.time()
-  if len(stock_data) > 0:
-    print("\nDone scraping!\nMaking historical prices...")
-    make_historical_prices()
-    historical_diff = time.time() - start_time
-    print(f"Finished creating historical prices in {historical_diff:.2f} seconds.")
+  # start_time = time.time()
+  # print("\nDone scraping!\nMaking historical prices...")
+  # make_historical_prices()
+  # historical_diff = time.time() - start_time
+  # print(f"Finished creating historical prices in {historical_diff:.2f} seconds.")
 
-    longest_insertion_time = max(insertion_times)
-    print(f"Longest insertion time: {longest_insertion_time:.2f} seconds.")
-  else:
-    print("No stock data... Quitting")
+  longest_insertion_time = max(insertion_times)
+  print(f"Longest insertion time: {longest_insertion_time:.2f} seconds.")
 
 @stub.local_entrypoint()
 def main():

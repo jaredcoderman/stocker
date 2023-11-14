@@ -1,5 +1,7 @@
 from funcs.db_connection import get_db_connection
 from datetime import datetime
+import tempfile 
+import csv
 
 def do_query(query, values=None):
   conn, cursor = get_db_connection()
@@ -73,17 +75,23 @@ def add_price(ticker, price):
   conn.close()
 
 def add_prices(prices):
-    conn, cursor = get_db_connection()
-    query = "INSERT INTO price (stock_ticker, price, created_at) VALUES (%s, %s, %s)"
-    
-    # Execute the query with multiple sets of values
-    cursor.executemany(query, prices)
+  conn, cursor = get_db_connection()
+  query = "INSERT INTO price (stock_ticker, price, created_at) VALUES (%s, %s, %s)"
+  
+  batch_size = len(prices) // 4  # Divide into 4 batches
+  
+  for i in range(0, len(prices), batch_size):
+      batch = prices[i:i + batch_size]
+      
+      # Execute the query with a batch of values
+      cursor.executemany(query, batch)
+      
+      # Commit the changes to the database after each batch
+  conn.commit()
 
-    # Commit the changes to the database
-    conn.commit()
+  cursor.close()
+  conn.close()
 
-    cursor.close()
-    conn.close()
 
 def add_historical_prices(prices):
   conn, cursor = get_db_connection()
