@@ -113,7 +113,8 @@ def scrape():
 
     longest_insertion_time = max(insertion_times)
     print(f"Longest insertion time: {longest_insertion_time:.2f} seconds.")
-  print("No stock data... Quitting")
+  else:
+    print("No stock data... Quitting")
 
 @stub.local_entrypoint()
 def main():
