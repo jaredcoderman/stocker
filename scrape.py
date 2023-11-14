@@ -1,12 +1,8 @@
 import requests
 import modal
 from funcs.db import *
-from datetime import datetime, time
-import time as sleep_time
-import os
-import pytz
-import math
-import random
+from funcs.time_helpers import *
+import time
 from bs4 import BeautifulSoup
 
 stub = modal.Stub("stock-scrape")
@@ -17,7 +13,7 @@ funcs = modal.Mount.from_local_dir(
     remote_path="/root/funcs",
 )
 
-bs4_image = modal.Image.debian_slim(python_version="3.10").run_commands(
+scrape_image = modal.Image.debian_slim(python_version="3.10").run_commands(
     "apt-get update",
     "apt-get install -y software-properties-common",
     "apt-add-repository non-free",
@@ -38,29 +34,25 @@ session = requests.Session()
 my_headers = {"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OSX 10_14_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36", 
           "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8"}
 
-def get_current_timestamp():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+# Makes a historical_price for every hour
+def make_historical_prices():
+  print("Getting historical prices...")
+  hourly_prices = get_all_hourly_prices_for_all_tickers()
+  formatted_hourly_prices = []
+  for historical_price in hourly_prices:
+    formatted_hourly_prices.append((historical_price[1], historical_price[2], historical_price[3]))
+  print("Inserting historical prices...")
+  add_historical_prices(formatted_hourly_prices)
 
-timezone = pytz.timezone('America/New_York')  # replace with the actual timezone
-
-def is_weekday():
-    # Get the current day of the week (Monday is 0, Sunday is 6)
-    return datetime.now(timezone).weekday() < 5
-
-def is_working_hours():
-    # Get the current time in the specified timezone
-    current_time = datetime.now(timezone).time()
-
-    # Check if the current time is between 9:30 am and 4:00 pm
-    return time(9, 30) <= current_time <= time(16, 0)
-
-
-@stub.function(image=bs4_image, secret=modal.Secret.from_name("database_connection_string"), mounts=[funcs], schedule=modal.Cron("30 14 * * *"), timeout=23400)
+@stub.function(image=scrape_image, secret=modal.Secret.from_name("database_connection_string"), mounts=[funcs], schedule=modal.Cron("30 14 * * *"), timeout=23400)
 def scrape():
+  insertion_times = []
+  stock_data = []
   while is_weekday() and is_working_hours():
-    stock_data = []
+    
+    # Scrape all the pages
     print("Scraping...")
-    total_start_time = sleep_time.time()
+    total_start_time = time.time()
     for i in range(0, 37):
       url = f'https://finviz.com/screener.ashx?v=111&f=cap_largeover'
           
@@ -81,45 +73,50 @@ def scrape():
           stock_data.append(important_data)
       else:
         print(f"Request to {url} failed with status code {response.status_code}.")
-
-      print(f"Page {i + 1} / 37")
-      sleep_time.sleep(.5)
-
-    # Create Stocks
-    # stocks_data = []
-    # for row in stock_data:
-    #   stocks_data.append((row[0], row[1]))
-    # create_stocks(stocks_data)
-    
-    # break
+      print(f'\r  Page {i + 1} / 37', end="\r")
+      time.sleep(.3)
 
     # Update stocks
     query_stock_data = []
     time_stamp = get_current_timestamp()
     for stock in stock_data:
       query_stock_data.append((stock[0], float(stock[2]), time_stamp))
+
     print("\nInserting prices...")
-    start_time = sleep_time.time()
+    start_time = time.time()
     add_prices(query_stock_data)
     print("Done!")
-    end_time = sleep_time.time()
-    diff = end_time - start_time
+
+    end_time = time.time()
+    insertion_diff = end_time - start_time
     total_diff = end_time - total_start_time
+
+    insertion_times.append(insertion_diff)
+
     print("\nTime Logs:\n")
-    print(f"Inserted in {diff:.2f} seconds.")
+    print(f"Inserted in {insertion_diff:.2f} seconds.")
     print(f"Total operation took {total_diff:.2f} seconds.")
     wait_time = 60 - total_diff
     if wait_time < 0:
       wait_time = 0
+
     print(f"\nWaiting {wait_time:.2f} seconds to restart..")
-    sleep_time.sleep(wait_time)
+    time.sleep(wait_time)
 
   # Now that the day of scraping is done, get the prices that are on the hour and make price_history entries
-  
+  start_time = time.time()
+  if len(stock_data) > 0:
+    print("\nDone scraping!\nMaking historical prices...")
+    make_historical_prices()
+    historical_diff = time.time() - start_time
+    print(f"Finished creating historical prices in {historical_diff:.2f} seconds.")
+
+    longest_insertion_time = max(insertion_times)
+    print(f"Longest insertion time: {longest_insertion_time:.2f} seconds.")
+  print("No stock data... Quitting")
 
 @stub.local_entrypoint()
 def main():
   scrape.remote()
-  print("Done!")
 
 

@@ -85,6 +85,20 @@ def add_prices(prices):
     cursor.close()
     conn.close()
 
+def add_historical_prices(prices):
+  conn, cursor = get_db_connection()
+  query = "INSERT INTO historical_price (stock_ticker, price, time_in_history) VALUES (%s, %s, %s)"
+  
+  # Execute the query with multiple sets of values
+  cursor.executemany(query, prices)
+
+  # Commit the changes to the database
+  conn.commit()
+
+  cursor.close()
+  conn.close()
+
+
 def get_prices(ticker):
   conn, cursor = get_db_connection()
   query = f"SELECT * FROM price WHERE stock_ticker = %s"
@@ -95,12 +109,56 @@ def get_prices(ticker):
   conn.close()
   return rows
 
-# def get_hourly_prices():
-#   conn, cursor = get_db_connection()
-#   query = f"SELECT * FROM price WHERE stock_ticker = %s"
-#   values = (ticker,)
-#   cursor.execute(query, values)
-#   rows = cursor.fetchall()
-#   cursor.close()
-#   conn.close()
-#   return rows
+def get_all_tickers():
+  conn, cursor = get_db_connection()
+  query = f"SELECT * FROM stock"
+  cursor.execute(query)
+  rows = cursor.fetchall()
+  tickers = []
+  for row in rows:
+    tickers.append(row[1])
+  cursor.close()
+  conn.close()
+  return tickers
+
+def get_all_hourly_prices_for_all_tickers():
+    conn, cursor = get_db_connection()
+
+    tickers = get_all_tickers()
+    all_prices = []
+
+    # Create a parameterized query with placeholders for tickers
+    query = "SELECT * FROM price WHERE stock_ticker IN %s AND EXTRACT(MINUTE FROM created_at) = 0"
+
+    # Execute the query with the list of tickers
+    cursor.execute(query, (tuple(tickers),))
+    rows = cursor.fetchall()
+
+    # Extend the all_prices list with the results
+    all_prices.extend(rows)
+
+    cursor.close()
+    conn.close()
+    return all_prices
+
+def delete_all_but_last_60_prices():
+   print("Deleting...")
+   do_query("""
+WITH ranked_prices AS (
+    SELECT
+        id,
+        stock_ticker,
+        price,
+        created_at,
+        ROW_NUMBER() OVER (PARTITION BY stock_ticker ORDER BY created_at DESC) AS row_num
+    FROM
+        price
+)
+DELETE FROM price
+USING ranked_prices
+WHERE price.id = ranked_prices.id AND ranked_prices.row_num > 60;""")
+   print("Done!")   
+   
+   
+
+
