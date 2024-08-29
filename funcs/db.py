@@ -78,7 +78,6 @@ def add_price(ticker, price):
 
 @decorators.log_execution_time
 def add_prices(prices):
-  print("Adding prices")
   conn, cursor = get_db_connection()
   query = "INSERT INTO price (ticker, price, created_at) VALUES (%s, %s, %s)"
   

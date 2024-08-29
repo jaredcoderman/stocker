@@ -2,6 +2,7 @@ import requests
 import modal
 from funcs.db import * 
 from funcs.time_helpers import *
+from StockList import *
 
 import time
 from bs4 import BeautifulSoup
@@ -92,13 +93,13 @@ def scrape():
         stock = []
         for td in tds:
           stock.append(td.get_text(strip=True))
-        important_data = [stock[1], stock[2], stock[8]]
-        stock_data.append(important_data)
+        new_stock = Stock(stock[1], stock[2], stock[8])
+        stock_data.append(new_stock)
     else:
       print(f"Request to {url} failed with status code {response.status_code}.")
     print(f'\r  Page {i + 1} / {num_pages}', end="\r")
     time.sleep(.4)
-  return stock_data
+  return StockList(stock_data)
 
 # @stub.function(image=scrape_image, secret=modal.Secret.from_name("stock-sim-env"), mounts=[funcs], schedule=modal.Cron("30 14 * * *"), timeout=23400)
 def init():
@@ -106,11 +107,11 @@ def init():
   while is_weekday() and is_working_hours():
     loop_start_time = time.time()
     # Scrape all the pages
-    stock_data = scrape()
+    stock_data: StockList = scrape()
 
     # Update stocks
-    price_record_data = format_for_price_record(stock_data)
-    stock_record_data = format_for_stock_record(stock_data)
+    price_record_data = format_for_price_record(stock_data.to_tuple())
+    stock_record_data = format_for_stock_record(stock_data.to_tuple())
     # create_stocks(stock_record_data)
     add_prices(price_record_data)
 
