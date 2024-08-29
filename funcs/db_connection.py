@@ -8,7 +8,7 @@ import psycopg2
 def get_db_connection():
   # Connect to the database
   #conn = psycopg2.connect(os.getenv("DATABASE_CONNECTION_STRING"))
-  conn = psycopg2.connect(os.environ["DATABASE_CONNECTION_STRING"])
+  conn = psycopg2.connect(os.environ["DATABASE_URL"])
 
 
   try:

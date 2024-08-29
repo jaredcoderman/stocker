@@ -1,6 +1,8 @@
 from funcs.db_connection import get_db_connection
 from datetime import datetime
 import tempfile 
+import funcs.decorators as decorators
+import time
 import csv
 
 def do_query(query, values=None):
@@ -40,7 +42,7 @@ CREATE TABLE stock (
   """
     CREATE TABLE price (
         id SERIAL PRIMARY KEY,
-        stock_ticker VARCHAR(10),
+        ticker VARCHAR(10),
         price DECIMAL(10, 2),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -66,7 +68,7 @@ def create_stocks(stocks_data):
 def add_price(ticker, price):
   conn, cursor = get_db_connection()
 
-  query = f"INSERT INTO price (stock_ticker, price) VALUES (%s, %s)"
+  query = f"INSERT INTO price (ticker, price) VALUES (%s, %s)"
   values = (ticker, price)
   do_query(query, values)
   print("Price added...")
@@ -74,12 +76,16 @@ def add_price(ticker, price):
   cursor.close()
   conn.close()
 
+@decorators.log_execution_time
 def add_prices(prices):
+  print("Adding prices")
   conn, cursor = get_db_connection()
-  query = "INSERT INTO price (stock_ticker, price, created_at) VALUES (%s, %s, %s)"
+  query = "INSERT INTO price (ticker, price, created_at) VALUES (%s, %s, %s)"
   
+
   batch_size = len(prices) // 4  # Divide into 4 batches
-  
+  print(f"Inserting {len(prices)} prices...")
+  insert_start = time.time()
   for i in range(0, len(prices), batch_size):
       batch = prices[i:i + batch_size]
       
@@ -88,14 +94,13 @@ def add_prices(prices):
       
       # Commit the changes to the database after each batch
   conn.commit()
-
   cursor.close()
   conn.close()
 
 
 def add_historical_prices(prices):
   conn, cursor = get_db_connection()
-  query = "INSERT INTO historical_price (stock_ticker, price, time_in_history) VALUES (%s, %s, %s)"
+  query = "INSERT INTO historical_price (ticker, price, time_in_history) VALUES (%s, %s, %s)"
   
   # Execute the query with multiple sets of values
   cursor.executemany(query, prices)
@@ -109,7 +114,7 @@ def add_historical_prices(prices):
 
 def get_prices(ticker):
   conn, cursor = get_db_connection()
-  query = f"SELECT * FROM price WHERE stock_ticker = %s"
+  query = f"SELECT * FROM price WHERE ticker = %s"
   values = (ticker,)
   cursor.execute(query, values)
   rows = cursor.fetchall()
@@ -136,7 +141,7 @@ def get_all_hourly_prices_for_all_tickers():
     all_prices = []
 
     # Create a parameterized query with placeholders for tickers
-    query = "SELECT * FROM price WHERE stock_ticker IN %s AND EXTRACT(MINUTE FROM created_at) = 0"
+    query = "SELECT * FROM price WHERE ticker IN %s AND EXTRACT(MINUTE FROM created_at) = 0"
 
     # Execute the query with the list of tickers
     cursor.execute(query, (tuple(tickers),))
@@ -155,10 +160,10 @@ def delete_all_but_last_60_prices():
 WITH ranked_prices AS (
     SELECT
         id,
-        stock_ticker,
+        ticker,
         price,
         created_at,
-        ROW_NUMBER() OVER (PARTITION BY stock_ticker ORDER BY created_at DESC) AS row_num
+        ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY created_at DESC) AS row_num
     FROM
         price
 )
@@ -166,7 +171,3 @@ DELETE FROM price
 USING ranked_prices
 WHERE price.id = ranked_prices.id AND ranked_prices.row_num > 60;""")
    print("Done!")   
-   
-   
-
-
