@@ -1,7 +1,7 @@
-from funcs.db_connection import get_db_connection
+from db_connection import get_db_connection
 from datetime import datetime
 import tempfile 
-import funcs.decorators as decorators
+import decorators as decorators
 import time
 import csv
 
@@ -170,3 +170,5 @@ DELETE FROM price
 USING ranked_prices
 WHERE price.id = ranked_prices.id AND ranked_prices.row_num > 60;""")
    print("Done!")   
+
+print(get_prices("AWDIJAOIWD"))
